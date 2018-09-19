@@ -139,3 +139,102 @@ Piece.prototype._collides = function(dx, dy, pat){
     }
   }
 }
+
+var piece = null;
+// ham xu ly su kien nhan dau vao tu ban phim
+var dropStart = Date.now();
+document.body.addEventListener("keypress", function(e){
+  if (e.keyCode == 38){
+    // truong hop nguoi dung an mui ten len
+    piece.rotate();
+    dropStart = Date.now();
+  }
+  if (e.keyCode == 40){
+    // truong hop nguoi dung an mui ten xuong
+    piece.down();
+  }
+  if (e.keyCode == 37){
+    // nguoi dung an sang trai
+    piece.moveLeft();
+    dropStart = Date.now();
+  }
+  if (e.keyCode == 39){
+    // nguoi dung an sang phai
+    piece.moveRight();
+    dropStart = Date.now();
+  }
+}, false);
+
+// the game loop
+var done = false;
+function main(){
+  var now = Date.now();
+  var delta = now - dropStart;
+  if (delta > 1000){
+    piece.down();
+    dropStart = now;
+  }
+  if (!done){
+    requestAnimationFrame(main);
+  }
+}
+main();
+
+var lines = 0;
+Piece.prototype.lock = function(){
+  for (var ix = 0; ix < this.pattern.length; ix++){
+    for (var iy = 0; iy < this.pattern.length; iy ++){
+      if (!this.pattern[ix][iy]){
+        continue;
+      }
+      if (this.y + iy < 0){
+        // ket thuc game
+        alert("you're done");
+        done = true;
+        return;
+      }
+      board[this.y + iy][this.x + ix] = true;
+    }
+  }
+  // xu ly khi 1 hang dc lap day thi xoa hang do di
+  // ghi de hang tren xuong
+  // cong them vao line 1 diem
+  var nlines = 0;
+  for (var y = 0; y < height; y++){
+    var line = true;
+    for (var x = 0; x < width; x++){
+      line = line && !board[y][x];
+    }
+    if (line){
+      for (var var y2 = y; y2 > 1; y2--){
+        for (var x = 0; x < width; x++){
+          board[y2][x] = board[y2-1][x];
+        }
+      }
+      for (var x = 0; x < width; x++){
+        board[0][x] = false;
+      }
+      nlines++;
+    }
+  }
+  if (nlines > 0){
+    lines += nlines;
+    drawBoard();
+    console.log(lines);
+  }
+};
+
+var pieces = [
+  [I, "cyan"],
+  [J, "blue"],
+  [L, "orange"],
+  [O, "yellow"],
+  [S, "green"],
+  [T, "purple"],
+  [Z, "red"]
+];
+
+function new Piece(){
+  var p = pieces[parseInt(Math.random() * pieces.length, 10)];
+  return new Piece(p[0], p[1]);
+}
