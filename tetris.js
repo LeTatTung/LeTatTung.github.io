@@ -59,30 +59,39 @@ Piece.prototype.draw = function(){
   }
   ctx.fillStyle = fs;
 };
-
+// day khoi xuong
 Piece.prototype.down = function(){
-  this.undraw();
-  this.y++;
-  this.draw();
+  if (!this._collides(0, 1, this.pattern)){
+    this.undraw();
+    this.y++;
+    this.draw();
+  }
 };
-
+// sang phai
 Piece.prototype.moveRight = function(){
-  this.undraw();
-  this.x++;
-  this.draw();
+  if (!this._collides(1, 0, this.pattern)){
+    this.undraw();
+    this.x++;
+    this.draw();
+  }
 };
-
+// sang trai
 Piece.prototype.moveLeft = function(){
-  this.undraw();
-  this.x--;
-  this.draw();
+  if (!this._collides(-1, 0, this.pattern)){
+    this.undraw();
+    this.x--;
+    this.draw();
+  }
 };
-
+// xoay
 Piece.prototype.rotate = function(){
-  this.undraw();
-  this.patterni = (this.patterni + 1) % this.patterns.length;
-  this.pattern = this.patterns[this.patterni];
-  this.draw;
+  var nextpat = this.patterns[(this.patterni + 1) % this.patterns.length]
+  if (!this._collides(0, 0, nextpat)){
+    this.undraw();
+    this.patterni = (this.patterni + 1) % this.patterns.length;
+    this.pattern = this.patterns[this.patterni];
+    this.draw;
+  }
 };
 
 Piece.prototype._fill = function(color){
@@ -98,11 +107,35 @@ Piece.prototype._fill = function(color){
     }
   }
 };
-
+// xoa bo vi tri cu da di qua
 Piece.prototype.undraw = function(ctx){
   this._fill("black");
 };
-
+// ve them vi tri moi khi den
 Piece.prototype.draw = function(ctx){
   this._fill(this.color);
 };
+// ham xu ly va cham
+// dung _ vi day chi la trong noi bo Piece, ko dc goi tren 1 bien
+// day la quy uoc cua JS
+Piece.prototype._collides = function(dx, dy, pat){
+  for (var ix = 0; ix < pat.length; ix++){
+    for (var iy = 0; iy < pat.length; iy++){
+      if (!pat[ix][iy]){
+        continue;
+      }
+      var x = this.x + ix + dx;
+      var y = this.y + iy + dy;
+      if (y >= height || x < 0 || x>= width){
+        return true;
+      }
+      if (y < 0){
+        // bo qua truong hop di qua day duoi
+        continue;
+      }
+      if (board[y][x]){
+        return true;
+      }
+    }
+  }
+}
