@@ -1,23 +1,45 @@
 var canvas = document.getElementById("board");
 var ctx = canvas.getContext("2d");
+var linecount = document.getElementById("lines");
+var clear = window.getComputedStyle(canvas).getPropertyValue('background-color');
 
 var width = 10;
 var height = 20;
 var tilez = 24;
 canvas.width = width * tilez;
 canvas.height = height * tilez;
-
+var done = false;
 var board = [];
-for(var row = 0; row < 20; row++){
+
+var pieces = [
+  [I, "cyan"],
+  [J, "blue"],
+  [L, "orange"],
+  [O, "yellow"],
+  [S, "green"],
+  [T, "purple"],
+  [Z, "red"]
+];
+
+var WAL = 1;
+var BLOCK = 2;
+
+var piece = null;
+var downI = {};
+
+var lines = 0;
+
+var dropStart = Date.now();
+for(var row = 0; row < height; row++){
   board[row] = [];
-  for(var tile = 0; tile < 10; tile++){
-    board[row][tile] = false;
+  for(var tile = 0; tile < width; tile++){
+    board[row][tile] = "";
   }
 }
 
 function drawSquare(x, y){
   ctx.fillRect(x * tilez, y * tilez, tilez, tilez);
-  ss = ctx.strokeStyle;
+  var ss = ctx.strokeStyle;
   ctx.strokeStyle = "#555";
   ctx.strokeRect(x * tilez, y * tilez, tilez, tilez);
   ctx.strokeStyle = "#888";
@@ -26,10 +48,10 @@ function drawSquare(x, y){
 }
 
 function drawBoard(){
-  fs = ctx.fillStyle();
+  var fs = ctx.fillStyle;
   for(var y = 0; y < height; y++){
     for(var x = 0; x < width; x++){
-      ctx.fillStyle = board[y][x] ? 'red' : 'white';
+      ctx.fillStyle = board[y][x] || clear;
       drawSquare(x, y, tilez, tilez);
     }
   }
@@ -43,7 +65,7 @@ function Piece(patterns, color){
 
   this.color = color;
 
-  this.x = 0;
+  this.x = width/2 - parseInt(Math.ceil(this.pattern.length/2), 10);
   this.y = -2;
 }
 
@@ -61,7 +83,10 @@ Piece.prototype.draw = function(){
 };
 // day khoi xuong
 Piece.prototype.down = function(){
-  if (!this._collides(0, 1, this.pattern)){
+  if (this._collides(0, 1, this.pattern)){
+    this.lock();
+    piece = newPiece();
+  }else{
     this.undraw();
     this.y++;
     this.draw();
@@ -85,17 +110,25 @@ Piece.prototype.moveLeft = function(){
 };
 // xoay
 Piece.prototype.rotate = function(){
-  var nextpat = this.patterns[(this.patterni + 1) % this.patterns.length]
+  var nextpat = this.patterns[(this.patterni + 1) % this.patterns.length];
+  var nudge = 0;
+  if (this._collides(0, 0, nextpat)){
+    // check xem sau khi va cham thi di chuyen ve phia nao
+    // - 1 la va cham voi tuong phai di chuyen ve trai
+    // 1 la va cham voi tuong trai, di chuyen ve phai
+    nudge = this.x > width/2 ? -1 : 1;
+  }
   if (!this._collides(0, 0, nextpat)){
     this.undraw();
+    this.x += nudge;
     this.patterni = (this.patterni + 1) % this.patterns.length;
     this.pattern = this.patterns[this.patterni];
-    this.draw;
+    this.draw();
   }
 };
 
 Piece.prototype._fill = function(color){
-  fs = ctx.fillStyle;
+  var fs = ctx.fillStyle;
   ctx.fillStyle = color;
   var x = this.x;
   var y = this.y;
@@ -106,10 +139,11 @@ Piece.prototype._fill = function(color){
       }
     }
   }
+  ctx.fillStyle = fs;
 };
 // xoa bo vi tri cu da di qua
 Piece.prototype.undraw = function(ctx){
-  this._fill("black");
+  this._fill(clear);
 };
 // ve them vi tri moi khi den
 Piece.prototype.draw = function(ctx){
@@ -127,46 +161,62 @@ Piece.prototype._collides = function(dx, dy, pat){
       var x = this.x + ix + dx;
       var y = this.y + iy + dy;
       if (y >= height || x < 0 || x>= width){
-        return true;
+        return WAL;
       }
       if (y < 0){
         // bo qua truong hop di qua day duoi
         continue;
       }
-      if (board[y][x]){
-        return true;
+      if (board[y][x] !== ""){
+        return BLOCK;
       }
     }
   }
-}
+  return 0;
+};
 
-var piece = null;
 // ham xu ly su kien nhan dau vao tu ban phim
-var dropStart = Date.now();
-document.body.addEventListener("keypress", function(e){
-  if (e.keyCode == 38){
+document.body.addEventListener("keydown", function(e){
+  if (downI[e.keyCode] !== null){
+    clearInterval(downI[e.keyCode]);
+  }
+  key(e.keyCode);
+  downI[e.keyCode] = setInterval(key.bind(this, e.keyCode), 200);
+}, false);
+
+document.body.addEventListener("keyup", function(e){
+  if (downI[e.keyCode] !== null){
+    clearInterval(downI[e.keyCode]);
+  }
+  downI[e.keyCode] = null;
+}, false);
+
+function key(k){
+  if (done){
+    return;
+  }
+  if (k == 38){
     // truong hop nguoi dung an mui ten len
     piece.rotate();
     dropStart = Date.now();
   }
-  if (e.keyCode == 40){
+  if (k == 40){
     // truong hop nguoi dung an mui ten xuong
     piece.down();
   }
-  if (e.keyCode == 37){
+  if (k == 37){
     // nguoi dung an sang trai
     piece.moveLeft();
     dropStart = Date.now();
   }
-  if (e.keyCode == 39){
+  if (k == 39){
     // nguoi dung an sang phai
     piece.moveRight();
     dropStart = Date.now();
   }
-}, false);
-
+}
 // the game loop
-var done = false;
+
 function main(){
   var now = Date.now();
   var delta = now - dropStart;
@@ -178,9 +228,7 @@ function main(){
     requestAnimationFrame(main);
   }
 }
-main();
 
-var lines = 0;
 Piece.prototype.lock = function(){
   for (var ix = 0; ix < this.pattern.length; ix++){
     for (var iy = 0; iy < this.pattern.length; iy ++){
@@ -193,7 +241,7 @@ Piece.prototype.lock = function(){
         done = true;
         return;
       }
-      board[this.y + iy][this.x + ix] = true;
+      board[this.y + iy][this.x + ix] = this.color;
     }
   }
   // xu ly khi 1 hang dc lap day thi xoa hang do di
@@ -203,10 +251,10 @@ Piece.prototype.lock = function(){
   for (var y = 0; y < height; y++){
     var line = true;
     for (var x = 0; x < width; x++){
-      line = line && !board[y][x];
+      line = line && board[y][x] !== "";
     }
     if (line){
-      for (var var y2 = y; y2 > 1; y2--){
+      for (var y2 = y; y2 > 1; y2--){
         for (var x = 0; x < width; x++){
           board[y2][x] = board[y2-1][x];
         }
@@ -220,21 +268,16 @@ Piece.prototype.lock = function(){
   if (nlines > 0){
     lines += nlines;
     drawBoard();
-    console.log(lines);
+    linecount.textContent = "Lines: " +lines;
   }
 };
 
-var pieces = [
-  [I, "cyan"],
-  [J, "blue"],
-  [L, "orange"],
-  [O, "yellow"],
-  [S, "green"],
-  [T, "purple"],
-  [Z, "red"]
-];
-
-function new Piece(){
+function newPiece(){
   var p = pieces[parseInt(Math.random() * pieces.length, 10)];
   return new Piece(p[0], p[1]);
 }
+
+piece = newPiece();
+drawBoard();
+linecount.textContent = "Lines: " +lines;
+main();
