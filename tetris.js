@@ -1,16 +1,21 @@
+// ve 2d bang canvas
 var canvas = document.getElementById("board");
 var ctx = canvas.getContext("2d");
+// hien thi diem
 var linecount = document.getElementById("lines");
+// xoa
 var clear = window.getComputedStyle(canvas).getPropertyValue('background-color');
 
 var width = 10;
 var height = 20;
 var tilez = 24;
+// kich thuoc o xep hinh
 canvas.width = width * tilez;
 canvas.height = height * tilez;
-var done = false;
 var board = [];
-
+// bien dieu khien ket thuc tro choi
+var done = false;
+// mang chi dnh mau cho cac khoi
 var pieces = [
   [I, "cyan"],
   [J, "blue"],
@@ -28,7 +33,7 @@ var piece = null;
 var downI = {};
 
 var lines = 0;
-
+// ve ra khung xep hinh
 var dropStart = Date.now();
 for(var row = 0; row < height; row++){
   board[row] = [];
@@ -36,7 +41,7 @@ for(var row = 0; row < height; row++){
     board[row][tile] = "";
   }
 }
-
+// ve ra 1 khoi bao gom 3 khoi con co kich thuoc khac nhau
 function drawSquare(x, y){
   ctx.fillRect(x * tilez, y * tilez, tilez, tilez);
   var ss = ctx.strokeStyle;
@@ -57,7 +62,7 @@ function drawBoard(){
   }
   ctx.fillStyle = fs;
 }
-
+// khoi tao object Piece
 function Piece(patterns, color){
   this.pattern = patterns[0];
   this.patterns = patterns;
@@ -175,6 +180,52 @@ Piece.prototype._collides = function(dx, dy, pat){
   return 0;
 };
 
+Piece.prototype.lock = function() {
+  for (var ix = 0; ix < this.pattern.length; ix++) {
+    for (var iy = 0; iy < this.pattern.length; iy++) {
+      if (!this.pattern[ix][iy]) {
+        continue;
+      }
+
+      if (this.y + iy < 0) {
+        // Game ends!
+        alert("You're done!");
+        done = true;
+        return;
+      }
+      board[this.y + iy][this.x + ix] = this.color;
+    }
+  }
+  // xu ly khi 1 hang dc lap day thi xoa hang do di
+  // ghi de hang tren xuong
+  // cong them vao line 1 diem
+  var nlines = 0;
+  for (var y = 0; y < height; y++) {
+    var line = true;
+    for (var x = 0; x < width; x++) {
+      line = line && board[y][x] !== "";
+    }
+    if (line) {
+      for (var y2 = y; y2 > 1; y2--) {
+        for (var x = 0; x < width; x++) {
+          board[y2][x] = board[y2-1][x];
+        }
+      }
+      for (var x = 0; x < width; x++) {
+        board[0][x] = "";
+      }
+      nlines++;
+    }
+  }
+
+  if (nlines > 0) {
+    lines += nlines;
+    drawBoard();
+    linecount.textContent = "Lines: " + lines;
+  }
+};
+
+
 // ham xu ly su kien nhan dau vao tu ban phim
 document.body.addEventListener("keydown", function(e){
   if (downI[e.keyCode] !== null){
@@ -215,7 +266,7 @@ function key(k){
     dropStart = Date.now();
   }
 }
-// the game loop
+// noi xu ly vong lap cua game
 
 function main(){
   var now = Date.now();
@@ -229,54 +280,12 @@ function main(){
   }
 }
 
-Piece.prototype.lock = function(){
-  for (var ix = 0; ix < this.pattern.length; ix++){
-    for (var iy = 0; iy < this.pattern.length; iy ++){
-      if (!this.pattern[ix][iy]){
-        continue;
-      }
-      if (this.y + iy < 0){
-        // ket thuc game
-        alert("you're done");
-        done = true;
-        return;
-      }
-      board[this.y + iy][this.x + ix] = this.color;
-    }
-  }
-  // xu ly khi 1 hang dc lap day thi xoa hang do di
-  // ghi de hang tren xuong
-  // cong them vao line 1 diem
-  var nlines = 0;
-  for (var y = 0; y < height; y++){
-    var line = true;
-    for (var x = 0; x < width; x++){
-      line = line && board[y][x] !== "";
-    }
-    if (line){
-      for (var y2 = y; y2 > 1; y2--){
-        for (var x = 0; x < width; x++){
-          board[y2][x] = board[y2-1][x];
-        }
-      }
-      for (var x = 0; x < width; x++){
-        board[0][x] = false;
-      }
-      nlines++;
-    }
-  }
-  if (nlines > 0){
-    lines += nlines;
-    drawBoard();
-    linecount.textContent = "Lines: " +lines;
-  }
-};
-
 function newPiece(){
   var p = pieces[parseInt(Math.random() * pieces.length, 10)];
   return new Piece(p[0], p[1]);
 }
 
+//bat dau nghich thoi nao
 piece = newPiece();
 drawBoard();
 linecount.textContent = "Lines: " +lines;
